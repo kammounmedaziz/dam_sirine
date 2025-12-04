@@ -9,6 +9,10 @@ import { MulterModule } from '@nestjs/platform-express';
 import { Utilisateur, UtilisateurSchema } from 'src/utilisateurs/schemas/utilisateur.schema';
 import { UtilisateursModule } from 'src/utilisateurs/utilisateurs.module';
 
+// 👇 Import AI services
+import { AiConfigService } from './services/ai-config.service';
+import { OpenRouterClientService } from './services/openrouter-client.service';
+
 @Module({
   imports: [
     MulterModule.register({
@@ -26,7 +30,11 @@ import { UtilisateursModule } from 'src/utilisateurs/utilisateurs.module';
   ],
 
   controllers: [MessageController],
-  providers: [MessageService],
+  providers: [
+    MessageService,
+    AiConfigService,
+    OpenRouterClientService,
+  ],
 
   // 👇 Si un autre module veut accéder au service messages
   exports: [MessageService],

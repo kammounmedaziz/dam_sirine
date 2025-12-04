@@ -1,0 +1,132 @@
+{
+  "info": {
+    "name": "Chat Summarization API",
+    "description": "Test collection for the chat summarization feature",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Summarize Unread Messages",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/messages/summarize/{{receiver_id}}/{{sender_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "messages",
+            "summarize",
+            "{{receiver_id}}",
+            "{{sender_id}}"
+          ]
+        },
+        "description": "Summarize unread messages between two users. This will automatically mark messages as read after summarization.\n\nParameters:\n- receiver_id: ID of the user who RECEIVED the messages\n- sender_id: ID of the user who SENT the messages"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Unread Messages Count",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/messages/unread/{{receiver_id}}/{{sender_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "messages",
+            "unread",
+            "{{receiver_id}}",
+            "{{sender_id}}"
+          ]
+        },
+        "description": "Get the count of unread messages between two users"
+      },
+      "response": []
+    },
+    {
+      "name": "Mark Messages as Read",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/messages/mark-read/{{receiver_id}}/{{sender_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "messages",
+            "mark-read",
+            "{{receiver_id}}",
+            "{{sender_id}}"
+          ]
+        },
+        "description": "Manually mark messages as read between two users"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Conversation",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/messages/conversation/{{user1_id}}/{{user2_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "messages",
+            "conversation",
+            "{{user1_id}}",
+            "{{user2_id}}"
+          ]
+        },
+        "description": "Get the full conversation between two users"
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    },
+    {
+      "key": "receiver_id",
+      "value": "69316d85b25f4b56579930d5",
+      "type": "string",
+      "description": "John Doe's ID (receiver of messages)"
+    },
+    {
+      "key": "sender_id",
+      "value": "69316d85b25f4b56579930d3",
+      "type": "string",
+      "description": "David Smith's ID (sender of messages)"
+    },
+    {
+      "key": "user1_id",
+      "value": "69316d85b25f4b56579930d3",
+      "type": "string"
+    },
+    {
+      "key": "user2_id",
+      "value": "69316d85b25f4b56579930d5",
+      "type": "string"
+    }
+  ]
+}

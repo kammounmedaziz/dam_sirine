@@ -1,15 +1,17 @@
 //android
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Message } from './schemas/message.schema';
 import { CreateMessageDto } from './dto/create-message.dto';
+import { OpenRouterClientService } from './services/openrouter-client.service';
 
 @Injectable()
 export class MessageService {
   constructor(
     @InjectModel(Message.name)
     private readonly messageModel: Model<Message>,
+    private readonly openRouterClient: OpenRouterClientService,
   ) {}
 
   // CREATE MESSAGE
@@ -135,6 +137,114 @@ async getUserConversations(userId: string) {
         ],
       })
       .sort({ createdAt: 1 });
+  }
+
+  // GET UNREAD MESSAGES FOR A USER IN A SPECIFIC CONVERSATION
+  async getUnreadMessages(userId: string, otherUserId: string) {
+    const messages = await this.messageModel
+      .find({
+        senderId: new Types.ObjectId(otherUserId),
+        receiverId: new Types.ObjectId(userId),
+        isRead: false,
+      })
+      .populate({
+        path: 'senderId',
+        select: 'firstName lastName nom prenom',
+      })
+      .sort({ createdAt: 1 })
+      .lean();
+
+    // Format messages for AI summarization
+    return messages.map((msg: any) => {
+      const sender: any = msg.senderId;
+      const senderName = sender && typeof sender === 'object'
+        ? `${sender.firstName || sender.prenom || ''} ${sender.lastName || sender.nom || ''}`.trim()
+        : 'Unknown';
+
+      return {
+        sender: senderName,
+        message: msg.content,
+      };
+    });
+  }
+
+  // MARK MESSAGES AS READ
+  async markMessagesAsRead(userId: string, otherUserId: string): Promise<void> {
+    await this.messageModel.updateMany(
+      {
+        senderId: new Types.ObjectId(otherUserId),
+        receiverId: new Types.ObjectId(userId),
+        isRead: false,
+      },
+      {
+        $set: {
+          isRead: true,
+          readAt: new Date(),
+        },
+      },
+    );
+  }
+
+  // SUMMARIZE UNREAD MESSAGES USING LLM
+  async summarizeUnreadMessages(userId: string, otherUserId: string): Promise<{ summary: string; key_points: string[]; messageCount: number; timestamp: Date }> {
+    // Get unread messages
+    const messages = await this.getUnreadMessages(userId, otherUserId);
+
+    if (messages.length === 0) {
+      throw new NotFoundException('No unread messages to summarize');
+    }
+
+    // Format messages for prompt
+    const chatText = messages
+      .map((msg) => `[${msg.sender}] ${msg.message}`)
+      .join('\n');
+
+    const prompt = `You are a helpful assistant that summarizes chat conversations.
+
+Please summarize the following chat messages and respond with ONLY a JSON object in this exact format (no markdown, no code blocks):
+
+{"summary": "A brief 1-2 sentence summary of the conversation", "key_points": ["first key point", "second key point", "third key point"]}
+
+Chat messages:
+${chatText}
+
+Remember: Respond with ONLY the JSON object, nothing else.`;
+
+    // Call LLM
+    const response = await this.openRouterClient.chatCompletion([
+      { role: 'user', content: prompt },
+    ]);
+
+    // Parse JSON response
+    try {
+      let cleanedResponse = response;
+
+      // Try to extract JSON if wrapped in markdown
+      if (response.includes('```json')) {
+        cleanedResponse = response.split('```json')[1].split('```')[0].trim();
+      } else if (response.includes('```')) {
+        cleanedResponse = response.split('```')[1].split('```')[0].trim();
+      }
+
+      const result = JSON.parse(cleanedResponse);
+
+      // Validate structure
+      if (!result.summary || !result.key_points) {
+        throw new Error('Invalid response structure');
+      }
+
+      // Mark messages as read after summarizing
+      await this.markMessagesAsRead(userId, otherUserId);
+
+      return {
+        summary: result.summary,
+        key_points: result.key_points,
+        messageCount: messages.length,
+        timestamp: new Date(),
+      };
+    } catch (error) {
+      throw new Error(`Failed to parse LLM response: ${error.message}\nResponse: ${response}`);
+    }
   }
 }
 // message.service.ts

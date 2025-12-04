@@ -14,11 +14,15 @@ import { CreateMessageDto } from './dto/create-message.dto';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UploadedFile, UseInterceptors, BadRequestException } from '@nestjs/common';
+import { ChatSummaryResponseDto } from './dto/chat-summary-response.dto';
+import { UnreadMessageDto } from './dto/unread-message.dto';
 
 @ApiTags('Messages')
 @Controller('messages')
 export class MessageController {
-  constructor(private readonly messageService: MessageService) {}
+  constructor(
+    private readonly messageService: MessageService,
+  ) {}
 
   @ApiOperation({ summary: "Créer un message" })
   @Post()
@@ -76,6 +80,34 @@ uploadAudio(@UploadedFile() file: Express.Multer.File) {
     type: "audio"
   };
 }
+
+  @ApiOperation({ summary: "Get unread messages between two users (formatted for AI)" })
+  @Get('unread/:userId/:otherUserId')
+  async getUnreadMessages(
+    @Param('userId') userId: string,
+    @Param('otherUserId') otherUserId: string,
+  ): Promise<UnreadMessageDto[]> {
+    return this.messageService.getUnreadMessages(userId, otherUserId);
+  }
+
+  @ApiOperation({ summary: "Summarize unread messages using AI" })
+  @Post('summarize/:receiverId/:senderId')
+  async summarizeUnreadMessages(
+    @Param('receiverId') receiverId: string,
+    @Param('senderId') senderId: string,
+  ): Promise<ChatSummaryResponseDto> {
+    return this.messageService.summarizeUnreadMessages(receiverId, senderId);
+  }
+
+  @ApiOperation({ summary: "Mark messages as read" })
+  @Post('mark-read/:userId/:otherUserId')
+  async markAsRead(
+    @Param('userId') userId: string,
+    @Param('otherUserId') otherUserId: string,
+  ) {
+    await this.messageService.markMessagesAsRead(userId, otherUserId);
+    return { success: true, message: 'Messages marked as read' };
+  }
 }
 
 // message.controller.ts
